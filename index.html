@@ -694,7 +694,7 @@ function run(){
   LAST={q,R,ok,casi};
   const d=R[0].delta,Td=q.tw+d;
   $("summary").innerHTML=`<div class="kpis"><div><span class="k">Temp. de diseño</span><b>${Td} °C</b></div><div><span class="k">Cumplen</span><b>${ok.length}</b></div><div><span class="k">Casi</span><b>${casi.length}</b></div><div><span class="k">Descartados</span><b>${no.length}</b></div></div>
-   <div class="why">${d?`${q.tw} °C de trabajo + ${d} °C por ${CALOR[q.calor]}${q.calor==="sol"?` sobre pieza ${q.color}`:""}.`:`${q.tw} °C de trabajo, sin aporte de calor adicional.`}${q.fab==="solvo"?" Fabricación por encargo: no hay restricciones de equipo.":""}</div>
+   <div class="why">${d?`${q.tw} °C de trabajo + ${d} °C por ${CALOR[q.calor]}${q.calor==="sol"?` sobre pieza ${q.color==="oscuro"?"oscura":"clara"}`:""}.`:`${q.tw} °C de trabajo, sin aporte de calor adicional.`}${q.fab==="solvo"?" Fabricación por encargo: no hay restricciones de equipo.":""}</div>
    ${q.assume.length?`<div class="assume">Supuestos por respuestas «no sé»: ${esc(q.assume.join("; "))}.</div>`:""}`;
   // condición limitante
   const cnt={};R.forEach(r=>new Set(r.ex.map(e=>e.k)).forEach(k=>cnt[k]=(cnt[k]||0)+1));
@@ -764,7 +764,7 @@ function quoteText(){
   L.push("Consulta desde el Selector de Filamentos de SOLVO");
   L.push("");
   L.push(`Aplicación: ${a?a.t:"—"}`);
-  L.push(`Temperatura de trabajo: ${q.tw} °C (pico ${q.tpk} °C, mínima ${q.tmin} °C)${q.calor!=="amb"?`; calor extra: ${CALOR[q.calor]}${q.calor==="sol"?`, pieza ${q.color}`:""}`:""}`);
+  L.push(`Temperatura de trabajo: ${q.tw} °C (pico ${q.tpk} °C, mínima ${q.tmin} °C)${q.calor!=="amb"?`; calor extra: ${CALOR[q.calor]}${q.calor==="sol"?`, pieza ${q.color==="oscuro"?"oscura":"clara"}`:""}`:""}`);
   L.push(`Intemperie: ${q.ext==="no"?"no":`sol ${["no","parte del día","todo el día"][q.uv]}, humedad ${["baja","normal","alta"][q.hum]}, tierra/arena ${["no","polvo","arena con roce"][q.abrE]}`}${q.ext==="ns"?" (supuesto)":""}`);
   const ch=CHEM.filter(([k])=>q.ch[k]>0).map(([k,l])=>`${l.toLowerCase()} (${LV[q.ch[k]]})`);
   L.push(`Líquidos y químicos: ${ch.length?ch.join(", "):"ninguno"}${q.liq==="ns"?" (supuesto)":""}`);
