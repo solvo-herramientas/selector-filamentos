@@ -70,3 +70,69 @@
 ## 13. Differentiate wizard section titles
 
 - [x] 13.1 Give shared wizard subsection titles a distinct display typeface and intermediate size while keeping control labels compact, then document the hierarchy.
+
+## 14. Repair printer capability layout
+
+- [x] 14.1 Replace the auto-fit printer-capability columns with full-width fields and selectors arranged for desktop and narrow screens, and document the layout.
+
+## 15. Use sliders for printer temperature capacities
+
+- [x] 15.1 Replace nozzle and bed capacity number fields with shared temperature sliders, retaining 1 °C precision, accessible labels/errors, positive-value validation, and broad ranges.
+
+## 16. Contain wizard transition motion
+
+- [x] 16.1 Prevent horizontal panel transitions from overflowing the viewport, remove the incomplete outgoing summary layer, and preserve reduced-motion behavior.
+
+## 17. Distinguish conditional follow-ups
+
+- [x] 17.1 Style conditional follow-up sections as inset wells across the wizard, preserve the existing option and validation behavior, and document which answer-dependent sections use the nested treatment.
+
+## 18. Remove transition content flashes
+
+- [x] 18.1 Animate only the incoming wizard panel, remove outgoing-screen state that produced an incomplete duplicate view, and preserve pointer/keyboard behavior plus reduced-motion handling.
+
+## 19. Remove borders from selected option cards
+
+- [x] 19.1 Make the shared selected-card border transparent at rest across radio and checkbox options while revealing it on hover and preserving border sizing, selected fill and indicator, plus keyboard focus outlines.
+
+## 20. Use the full methodology Drawer width
+
+- [x] 20.1 Remove the methodology copy's maximum-width constraint while preserving its horizontal padding, independent scrolling, and existing Drawer layout.
+
+## 21. Move result ranks beside material names
+
+- [x] 21.1 Remove numeric rank rails from qualifying material cards and place each rank as a bold yellow `#N` before its material name while retaining the near-match marker.
+
+## 22. Refine result card metadata
+
+- [x] 22.1 Move the qualifying rank to the right side of the material heading, immediately before the score.
+- [x] 22.2 Remove the score gauge from result cards.
+- [x] 22.3 Remove the dashed separator above the technical badges.
+
+## 23. Compact lower-ranked result cards
+
+- [x] 23.1 Keep the top qualifying match expanded, collapse details for other qualifying matches behind a full-width accessible disclosure control, and animate expansion with reduced-motion support while keeping near-match cards expanded.
+
+## 24. Move inquiry and restart actions to the results footer
+
+- [x] 24.1 Remove the results contact card, put the quotation's WhatsApp link in the fixed footer as “Enviar consulta”, and change the other results action to restart the selector.
+
+## 25. Put comparison toggles inside result details
+
+- [x] 25.1 Remove comparison controls from card headers and add an accessible pressed-state toggle to expanded card details.
+
+## 26. Replace the title rule with wizard progress
+
+- [x] 26.1 Replace the header's bottom border with an accessible full-width progress bar driven by the active wizard step, and animate its fill with reduced-motion support.
+
+## 27. Place comparison toggles at the bottom of result cards
+
+- [x] 27.1 Move each comparison toggle to the bottom of its expanded details and make it full width.
+
+## 28. Open material comparison in a floating Drawer
+
+- [x] 28.1 Replace the inline comparison panel with a floating trigger above the results footer, animate its entrance from below, and show the comparison chart and table in a scrollable Drawer.
+
+## 29. Keep the comparison trigger visible while scrolling
+
+- [x] 29.1 Render the floating comparison trigger from the viewport-fixed footer outside the animated wizard panel so it remains visible while scrolling.

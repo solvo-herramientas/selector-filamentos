@@ -10,7 +10,6 @@ export type NavigationDirection = "forward" | "backward";
 
 export interface WizardTransition {
   id: number;
-  outgoing: ScreenId;
   direction: NavigationDirection;
   source: ActivationSource;
   phase: "preparing" | "animating";
@@ -164,13 +163,9 @@ export function answersChanged(previous: RawAnswers | null, current: RawAnswers)
   return previous !== null && JSON.stringify(previous) !== JSON.stringify(current);
 }
 
-function currentScreen(state: WizardState): ScreenId {
-  return state.phase === "results" ? "results" : state.activeStep;
-}
-
-function transitionTo(state: WizardState, outgoing: ScreenId, direction: NavigationDirection, source: ActivationSource): Pick<WizardState, "transition" | "transitionSequence"> {
+function transitionTo(state: WizardState, direction: NavigationDirection, source: ActivationSource): Pick<WizardState, "transition" | "transitionSequence"> {
   const id = state.transitionSequence + 1;
-  return { transitionSequence: id, transition: source === "keyboard" ? null : { id, outgoing, direction, source, phase: "preparing" } };
+  return { transitionSequence: id, transition: source === "keyboard" ? null : { id, direction, source, phase: "preparing" } };
 }
 
 function invalidateFrom(state: WizardState, stepId: StepId): StepId[] {
@@ -211,23 +206,23 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     if (!next) {
       const issue = validateAllSteps(state);
       if (issue) return { ...state, activeStep: issue.stepId, errors: issue.errors, completedSteps: completedSteps.filter((stepId) => stepId !== issue.stepId) };
-      return { ...state, phase: "results", completedSteps, errors: {}, ...transitionTo(state, state.activeStep, "forward", action.source) };
+      return { ...state, phase: "results", completedSteps, errors: {}, ...transitionTo(state, "forward", action.source) };
     }
-    return { ...state, activeStep: next, completedSteps, errors: {}, ...transitionTo(state, state.activeStep, "forward", action.source) };
+    return { ...state, activeStep: next, completedSteps, errors: {}, ...transitionTo(state, "forward", action.source) };
   }
   if (action.type === "back") {
     if (state.phase !== "questions") return state;
     const previous = previousStepId(state.activeStep);
     if (!previous) return state;
-    return { ...state, activeStep: previous, errors: {}, ...transitionTo(state, state.activeStep, "backward", action.source) };
+    return { ...state, activeStep: previous, errors: {}, ...transitionTo(state, "backward", action.source) };
   }
   if (action.type === "edit") {
     if (state.phase !== "results") return state;
-    return { ...state, phase: "questions", activeStep: "application", errors: {}, ...transitionTo(state, "results", "backward", action.source) };
+    return { ...state, phase: "questions", activeStep: "application", errors: {}, ...transitionTo(state, "backward", action.source) };
   }
   if (action.type === "restart") {
     const initial = createInitialWizard();
-    return { ...initial, ...transitionTo(state, currentScreen(state), "backward", action.source) };
+    return { ...initial, ...transitionTo(state, "backward", action.source) };
   }
   if (action.type === "transition-start") return state.transition?.id === action.id && state.transition.phase === "preparing" ? { ...state, transition: { ...state.transition, phase: "animating" } } : state;
   if (action.type === "transition-complete") return state.transition?.id === action.id ? { ...state, transition: null } : state;

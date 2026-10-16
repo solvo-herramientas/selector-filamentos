@@ -10,8 +10,8 @@ import ExplorerPanel from "./components/ExplorerPanel.tsx";
 import CuratorPanel from "./components/CuratorPanel.tsx";
 import { deriveConditions } from "./domain/conditions.ts";
 import { rankMaterials } from "./domain/evaluation.ts";
-import { clearComparisonSelection, updateComparisonSelection } from "./domain/exploration.ts";
-import { answersChanged, createInitialWizard, nextStepId, stepDescription, stepProgress, stepTitle, validateAllSteps, wizardReducer, type ScreenId, type StepId, type WizardState } from "./domain/filamentSelectionFlow.ts";
+import { clearComparisonSelection, quotationText, updateComparisonSelection } from "./domain/exploration.ts";
+import { answersChanged, createInitialWizard, nextStepId, stepDescription, stepProgress, stepTitle, validateAllSteps, wizardReducer, type StepId, type WizardState } from "./domain/filamentSelectionFlow.ts";
 import { cloneMaterials, getBrowserStorage, loadCuratorAccess, loadMaterialDatabase, resetMaterialDatabase, saveCuratorAccess, saveMaterialDatabase, setMaterialField } from "./domain/persistence.ts";
 import type { RawAnswers } from "./domain/types.ts";
 
@@ -28,12 +28,18 @@ function SiteBar() {
   </div></div>;
 }
 
-function SiteHeader({ onOpenMethod }: { onOpenMethod: () => void }) {
-  return <header className="flex flex-wrap items-end justify-between gap-3 border-0 border-b-2 border-solid border-foreground pt-[22px] pb-3.5 [@media(max-width:800px)]:items-start">
-    <div className="min-w-0">
-      <h1 className="m-0 font-display [font-stretch:72%] text-[clamp(28px,4.5vw,44px)] font-extrabold uppercase leading-[.95] tracking-[-.01em] text-balance">Selector de <span className="bg-primary px-[.12em] text-primary-foreground box-decoration-clone">Filamentos</span></h1>
+function SiteHeader({ onOpenMethod, progress }: { onOpenMethod: () => void; progress: { current: number; total: number } }) {
+  const progressRatio = progress.current / progress.total;
+  return <header className="grid gap-3 pt-[22px]">
+    <div className="flex flex-wrap items-end justify-between gap-3 [@media(max-width:800px)]:items-start">
+      <div className="min-w-0">
+        <h1 className="m-0 font-display [font-stretch:72%] text-[clamp(28px,4.5vw,44px)] font-extrabold uppercase leading-[.95] tracking-[-.01em] text-balance">Selector de <span className="bg-primary px-[.12em] text-primary-foreground box-decoration-clone">Filamentos</span></h1>
+      </div>
+      <TabNavigation onOpenMethod={onOpenMethod} />
     </div>
-    <TabNavigation onOpenMethod={onOpenMethod} />
+    <div role="progressbar" aria-label="Progreso del selector" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.current} aria-valuetext={`Paso ${progress.current} de ${progress.total}`} className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+      <div aria-hidden="true" className="h-full w-full origin-left rounded-full bg-primary transition-transform duration-(--motion-duration) ease-linear motion-reduce:duration-100" style={{ transform: `scaleX(${progressRatio})` }} />
+    </div>
   </header>;
 }
 
@@ -58,7 +64,7 @@ function Methodology({ open, onClose }: { open: boolean; onClose: () => void }) 
         <DrawerClose render={<Button type="button" variant="ghost" className="size-9 flex-none rounded-full border border-input bg-transparent p-0 text-2xl font-normal leading-none text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground" aria-label="Cerrar" />}>×</DrawerClose>
       </DrawerHeader>
       <div className="min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-auto grid w-full max-w-[72ch] content-start gap-3.5 px-4 pt-[18px] pb-7 text-[14.5px] [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:font-display [&_h2]:[font-stretch:80%] [&_h2]:text-[22px] [&_h2]:font-[750] [&_p]:m-0 [&_ul]:m-0 [&_li]:mb-1">
+        <div className="grid min-w-0 w-full content-start gap-3.5 px-4 pt-[18px] pb-7 text-[14.5px] [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:font-display [&_h2]:[font-stretch:80%] [&_h2]:text-[22px] [&_h2]:font-[750] [&_p]:m-0 [&_ul]:m-0 [&_li]:mb-1">
           <p>Primero descarta los materiales que no pueden cumplir una condición: temperatura por encima de su límite, inmersión en un agente que lo ataca, UV permanente sobre un material que se degrada, o un requisito de equipo que no está disponible. Después ordena los que quedan con un puntaje ponderado de 0 a 100.</p>
           <h2>Casi cumplen</h2>
           <p>Un material descartado por una sola condición que tiene solución práctica aparece como «casi cumple», con la solución indicada: recubrimiento anti-UV, recocido, una temperatura de trabajo apenas menor, contacto ocasional en vez de inmersión, o fabricarla con un equipo mejor.</p>
@@ -84,21 +90,8 @@ function CuratorToggle({ curatorAccess, curatorHash, onCuratorClick }: { curator
   return <Button type="button" variant="ghost" className="mt-3 ml-auto print:hidden! h-auto min-h-0 w-fit rounded-none border-0 bg-transparent p-0 text-xs font-medium text-muted-foreground underline hover:bg-transparent" id="curBtn" onClick={onCuratorClick}>{curatorAccess ? "Salir del modo curador" : "Modo curador"}</Button>;
 }
 
-function OutgoingScreen({ screen, className }: { screen: ScreenId; className: string }) {
-  const progress = screen === "results" ? null : stepProgress(screen as StepId);
-  return <div className={className} aria-hidden="true" inert>
-    {progress && <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground">Paso {progress.current} de {progress.total}</div>}
-    <h2 className="mb-2 m-0 font-display [font-stretch:90%] text-xl font-bold leading-[1.2] focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">{stepTitle(screen)}</h2>
-    <p className="m-0 text-[13px] text-muted-foreground">{stepDescription(screen)}</p>
-  </div>;
-}
-
 function activeMotionClass(state: WizardState): string {
-  return cn("min-w-0 [grid-area:1/1] opacity-100 [transform:translateX(0)] transition-[transform,opacity] duration-(--motion-duration) ease-wizard motion-reduce:transform-none! motion-reduce:transition-opacity print:transform-none! print:opacity-100!", state.transition?.phase === "preparing" && (state.transition.direction === "forward" ? "opacity-0 [transform:translateX(3%)]" : "opacity-0 [transform:translateX(-3%)]"));
-}
-
-function outgoingMotionClass(state: WizardState): string {
-  return cn("min-w-0 self-start [grid-area:1/1] rounded-md border border-input bg-card p-4 opacity-100 [transform:translateX(0)] transition-[transform,opacity] duration-(--motion-duration) ease-wizard motion-reduce:transform-none! motion-reduce:transition-opacity print:hidden!", state.transition?.phase === "animating" && (state.transition.direction === "forward" ? "opacity-0 [transform:translateX(-3%)]" : "opacity-0 [transform:translateX(3%)]"));
+  return cn("min-w-0 opacity-100 [transform:translateX(0)] transition-[transform,opacity] duration-(--motion-duration) ease-wizard motion-reduce:transform-none! motion-reduce:transition-opacity print:transform-none! print:opacity-100!", state.transition?.phase === "preparing" && (state.transition.direction === "forward" ? "opacity-0 [transform:translateX(8px)]" : "opacity-0 [transform:translateX(-8px)]"));
 }
 
 export default function App() {
@@ -110,6 +103,7 @@ export default function App() {
   const [curatorToast, setCuratorToast] = useState("");
   const [wizard, dispatchWizard] = useReducer(wizardReducer, undefined, createInitialWizard);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [comparisonHint, setComparisonHint] = useState<string>();
   const [actionsHeight, setActionsHeight] = useState(0);
   const curatorToastTimer = useRef<number | undefined>(undefined);
@@ -119,14 +113,17 @@ export default function App() {
   const previousFocusTarget = useRef<string>("questions:application");
   const submittedAnswers = useRef<RawAnswers | null>(null);
   const nextStep = nextStepId(wizard.activeStep);
+  const progress = stepProgress(wizard.activeStep);
   const conditions = useMemo(() => wizard.phase === "results" ? deriveConditions(wizard.answers) : null, [wizard.phase, wizard.answers]);
   const ranked = useMemo(() => conditions ? rankMaterials(database, conditions) : null, [database, conditions]);
+  const whatsAppHref = useMemo(() => conditions && ranked ? `https://wa.me/5492645484363?text=${encodeURIComponent(quotationText(conditions, ranked))}` : "", [conditions, ranked]);
   useEffect(() => { saveCuratorAccess(getBrowserStorage, curatorAccess); }, [curatorAccess]);
   useEffect(() => () => { if (curatorToastTimer.current !== undefined) window.clearTimeout(curatorToastTimer.current); }, []);
   useEffect(() => {
     if (wizard.phase !== "results") return;
     if (answersChanged(submittedAnswers.current, wizard.answers)) {
       setSelectedIds(clearComparisonSelection());
+      setComparisonOpen(false);
       setComparisonHint(undefined);
     }
     submittedAnswers.current = wizard.answers;
@@ -157,6 +154,7 @@ export default function App() {
   const handleContinue = (source: "pointer" | "keyboard") => {
     if (nextStep === null && !validateAllSteps(wizard) && answersChanged(submittedAnswers.current, wizard.answers)) {
       setSelectedIds(clearComparisonSelection());
+      setComparisonOpen(false);
       setComparisonHint(undefined);
     }
     dispatchWizard({ type: "continue", source });
@@ -164,10 +162,12 @@ export default function App() {
   const toggleComparison = (id: string, checked: boolean) => {
     const selection = updateComparisonSelection(selectedIds, id, checked);
     setSelectedIds(selection.selectedIds);
+    if (selection.selectedIds.length < 2) setComparisonOpen(false);
     setComparisonHint(selection.limitExceeded ? "Máximo 3: quitá uno para agregar otro" : undefined);
   };
   const clearComparison = () => {
     setSelectedIds(clearComparisonSelection());
+    setComparisonOpen(false);
     setComparisonHint(undefined);
   };
   const updateMaterial = (index: number, key: string, value: number) => {
@@ -193,21 +193,18 @@ export default function App() {
     if (next) setActiveTab("db");
     else if (activeTab === "db") setActiveTab("sel");
   };
-  const panelTransition = wizard.transition?.source === "pointer" ? wizard.transition : null;
-  const outgoingScreen = panelTransition?.outgoing ?? null;
   const actionsStyle = { "--wizard-actions-height": actionsHeight + "px" } as CSSProperties;
   return <>
     <SiteBar />
     <div className="mx-auto max-w-[1320px]">
-      <SiteHeader onOpenMethod={() => setMethodologyOpen(true)} />
+      <SiteHeader onOpenMethod={() => setMethodologyOpen(true)} progress={progress} />
       <section id="tab-sel" className="mt-[18px] pb-[calc(var(--wizard-actions-height,0px)+16px)] print:pb-0!" style={actionsStyle} hidden={activeTab !== "sel"}>
-        <div className="grid min-w-0 items-start print:block">
-          {outgoingScreen && <OutgoingScreen className={outgoingMotionClass(wizard)} screen={outgoingScreen} />}
+        <div className="-mx-2 min-w-0 overflow-x-clip px-2 print:static print:overflow-visible">
           <div key={wizard.phase + ":" + wizard.activeStep} className={activeMotionClass(wizard)}>
-            {wizard.phase === "questions" ? <SelectorForm stepId={wizard.activeStep} progress={stepProgress(wizard.activeStep)} answers={wizard.answers} selectedApplication={wizard.selectedApplication} errors={wizard.errors} headingRef={questionHeadingRef} onAnswerChange={(key, value) => dispatchWizard({ type: "update-answer", key, value })} onApplicationSelect={(id) => dispatchWizard({ type: "select-application", id })} onContinue={() => handleContinue("keyboard")} /> : conditions && ranked ? <ResultsPanel rootRef={resultsRef} headingRef={resultsHeadingRef} conditions={conditions} ranked={ranked} selectedIds={selectedIds} comparisonHint={comparisonHint} onComparisonToggle={toggleComparison} onComparisonClear={clearComparison} /> : null}
+            {wizard.phase === "questions" ? <SelectorForm stepId={wizard.activeStep} progress={stepProgress(wizard.activeStep)} answers={wizard.answers} selectedApplication={wizard.selectedApplication} errors={wizard.errors} headingRef={questionHeadingRef} onAnswerChange={(key, value) => dispatchWizard({ type: "update-answer", key, value })} onApplicationSelect={(id) => dispatchWizard({ type: "select-application", id })} onContinue={() => handleContinue("keyboard")} /> : conditions && ranked ? <ResultsPanel rootRef={resultsRef} headingRef={resultsHeadingRef} conditions={conditions} ranked={ranked} selectedIds={selectedIds} comparisonHint={comparisonHint} comparisonOpen={comparisonOpen} onComparisonOpenChange={setComparisonOpen} onComparisonToggle={toggleComparison} onComparisonClear={clearComparison} /> : null}
           </div>
         </div>
-        {activeTab === "sel" && <WizardActions phase={wizard.phase} firstStep={wizard.activeStep === "application"} finalStep={wizard.phase === "questions" && nextStep === null} applicationSelected={wizard.selectedApplication !== null} onHeightChange={setActionsHeight} onBack={(source) => dispatchWizard({ type: "back", source })} onContinue={handleContinue} onEdit={(source) => dispatchWizard({ type: "edit", source })} onRestart={(source) => { clearComparison(); dispatchWizard({ type: "restart", source }); }} />}
+        {activeTab === "sel" && <WizardActions phase={wizard.phase} firstStep={wizard.activeStep === "application"} finalStep={wizard.phase === "questions" && nextStep === null} applicationSelected={wizard.selectedApplication !== null} whatsAppHref={whatsAppHref} comparisonCount={wizard.phase === "results" ? selectedIds.length : 0} comparisonOpen={comparisonOpen} onOpenComparison={() => setComparisonOpen(true)} onHeightChange={setActionsHeight} onBack={(source) => dispatchWizard({ type: "back", source })} onContinue={handleContinue} onRestart={(source) => { clearComparison(); dispatchWizard({ type: "restart", source }); }} />}
       </section>
       <ExplorerPanel materials={database} hidden={activeTab !== "exp"} />
       <Methodology open={methodologyOpen} onClose={() => setMethodologyOpen(false)} />

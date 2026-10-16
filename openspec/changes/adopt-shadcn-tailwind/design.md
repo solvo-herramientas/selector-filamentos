@@ -54,17 +54,29 @@ Alternative: importing all default Tailwind styles and leaving custom CSS unlaye
 
 Add a shared selectable-card primitive backed by shadcn RadioGroupItem, and use the same border, spacing, text hierarchy, selected state, and focus treatment for application presets, temperature choices, effort types, and every `SegmentedControl` option across the wizard and Explorer. Wrap radio-card groups with `SelectableCardGrid`, which fills its available width by default, uses two columns that collapse to one below 700px, and accepts per-instance `columns`, `mobileColumns`, and `className` props. Keep `SegmentedControl` as the typed adapter, preserving its controlled value, callback, option IDs, name, accessible labels/descriptions, invalid state, and data attributes while passing through grid layout options. Groups with one to three options automatically use that many columns on desktop and mobile unless an instance explicitly overrides the layout; larger groups retain the default two-column desktop, one-column mobile layout. Remove `size` and `full` styling variants so callers cannot create a second visual treatment. Preserve checkbox semantics for multi-selection and standalone boolean fields while allowing the standalone `roce` choice to use the shared card treatment.
 
+Selected cards keep their fill and indicator but have a transparent border at rest; hovering any option reveals its border. Preserve the separate `focus-visible` outline for keyboard navigation.
+
 Keep the wizard action bar fixed to the viewport bottom at every width. Use a full-width surface with its controls aligned to a centered inner container matching the page content; keep buttons right-aligned on desktop and fluid on smaller screens. Reserve page padding from the bar's measured height and preserve safe-area and visual-viewport handling.
+
+Replace the title header's bottom rule with a full-width wizard progress bar. Show progress for the current step out of seven, expose it as an accessible progressbar, and animate only the fill with a short linear transform transition that shortens for reduced-motion preferences.
 
 ### Distinguish subsection headings from control labels
 
 Style the shared wizard `Subsection` headings with the display typeface, an intermediate 16px size, and stronger weight. Keep field and group labels at their compact 13px treatment so the visual hierarchy remains clear across wizard steps.
+
+Lay out printer capabilities with two equal-width temperature fields, a full-row enclosure selector, and two equal-width equipment selectors. Keep each selector group full-width within its grid cell and stack the layout below 560px; avoid auto-fit columns that can compress the option cards on desktop.
+
+Use a bordered, inset `bg-card` well for each conditional follow-up revealed by an earlier answer. Apply it to manual working temperature, sun-exposed part color, outdoor conditions, chemical contact levels, mechanical load details, and printer capabilities. Keep ordinary subsections on the page surface so only drill-down content gains the nested treatment.
+
+Keep wizard panel transitions clipped to their content viewport and animate only the incoming panel. Do not render a reduced outgoing summary: it briefly showed a second, incomplete version of the previous step during the transition. Use a small fixed horizontal translation rather than a percentage of panel width so motion cannot create page-level horizontal overflow.
 
 Alternative: keep segmented strips beside option cards. Shared cards make choices visually consistent and keep the radio keyboard model.
 
 ### Use shadcn Slider for temperature fields
 
 Create a source-owned `Slider` primitive from `@base-ui/react/slider`, matching the shadcn controlled array-value API and styling its track, fill, thumb, focus, and disabled states with Tailwind semantic tokens. Use it for working, occasional peak, and minimum temperatures. Keep the working-temperature slider at -20 to 160 °C; use -40 to 200 °C for the peak and minimum sliders, all with a 1 °C step. Show each current value in a read-only output beside its label and clamp only the thumb position when a stored value falls outside its slider range. Keep validation and accessible descriptions on each control.
+
+Use the same shared control for printer nozzle and bed maximum temperatures, with 1 °C steps and broad 0–500 °C and 0–200 °C ranges respectively. Retain their positive-value validation and accessible error descriptions.
 
 Alternative: keep browser-native range or number controls. The user requested the shadcn Slider treatment and a label-only value display for all temperature fields.
 
@@ -77,6 +89,14 @@ Alternative: rely only on the card border and background. The user requested a v
 ### Use shadcn Drawer for methodology
 
 Replace the native `<dialog>` implementation with a source-owned shadcn Drawer using the current Base UI backend (`@base-ui/react`), not the legacy Vaul version. Keep the existing help button as an external controlled trigger, retain the current bottom-anchored maximum width and height, and render the header separately from a flexible, scrollable content region. Let Base UI own modal focus, Escape, and outside-press dismissal; the app's existing `open` state remains the source of truth. Set `body` to `position: relative` through the minimal Tailwind base because the current shadcn Drawer overlay needs it on scrolled iOS Safari pages.
+
+Let the methodology copy fill the Drawer content width instead of constraining it to a centered text column. Keep the existing horizontal padding as the content gutter.
+
+On qualifying result cards, show the rank as a bold yellow `#N` immediately before the score at the right side of the material heading, and remove the numeric rank rail. Keep the separate vertical “casi” marker for near-match cards. Result cards do not show a score gauge. Technical settings use badges without a dashed separator above them. Keep the top qualifying match expanded; show the remaining qualifying cards compactly with the material heading and thermal criteria visible inside a full-width accessible disclosure control, and let it expand the remaining details with a brief reduced-motion-aware transition. Put each card’s full-width comparison toggle at the bottom of its details area so compact cards show it only after expansion. Near-match cards stay expanded.
+
+When at least two materials are selected for comparison, show a floating “Ver comparación” trigger above the fixed results footer. Render the trigger from the viewport-fixed footer surface outside the animated wizard panel so it stays visible while scrolling. Animate its entrance from slightly below with a short transform-and-opacity transition and reduced-motion support. Open the existing radar and comparison table in a bottom Drawer with its own scrollable content, and reserve enough results space so the floating trigger does not cover the last card.
+
+Do not add a separate contact card after the results. Put “Enviar consulta” with a WhatsApp icon in the fixed results footer, using the current quotation text, and make the left “Empezar de nuevo” action restart the selector.
 
 Alternative: keep the native dialog. The user explicitly chose shadcn Drawer so the methodology surface uses the same source-owned primitive model as the rest of the UI.
 
