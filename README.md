@@ -41,6 +41,20 @@ corepack pnpm build
 corepack pnpm preview
 ```
 
+### Estilos y componentes compartidos
+
+Toda la interfaz se estiliza con utilidades de Tailwind CSS v4, integrado mediante el plugin oficial de Vite en `vite.config.ts`. `src/styles.css` contiene los tokens de color, fuentes, radios y movimiento, junto con una base global mínima que usa `@apply`; no importa Preflight ni define selectores de componentes. Conserva los temas automático, claro y oscuro mediante `prefers-color-scheme` y `data-theme`.
+
+Los componentes locales basados en shadcn/ui viven en `src/components/ui`: Button, Input, Label, Checkbox, RadioGroup, Slider, Card, Badge, Table, NativeSelect y Drawer. Son fuentes editables y adaptadas a la presentación compacta de SOLVO. `Table` conserva la tabla nativa y deja el contenedor de desplazamiento en el panel para respetar sus columnas fijas. `Drawer` y `Slider` usan Base UI mediante `@base-ui/react`; `Drawer` muestra el panel modal «Cómo funciona» y `Slider` controla las temperaturas de trabajo, pico ocasional y mínima. El helper `cn` está en `src/lib/utils.ts`. El alias `@/*` apunta a `src/*` tanto en Vite como en `tsconfig.json`; `components.json` configura las rutas para futuras incorporaciones.
+
+`src/components/ui/selectable-card.tsx` define la apariencia común de las opciones de respuesta. `SelectableCard` conserva semántica de radio y `SelectableCheckboxCard` conserva semántica de casilla; ambos comparten dimensiones, tipografía, borde y estado seleccionado, con un círculo vacío o un círculo relleno amarillo con tilde según el estado. Los iconos decorativos vienen de `@tabler/icons-react` y no reemplazan la semántica accesible del control. `SelectableCardGrid` envuelve `RadioGroup` con ancho completo por defecto, dos columnas y una en pantallas de hasta 700 px; cada instancia puede ajustar `columns`, `mobileColumns` y `className`. `src/components/SegmentedControl.tsx` adapta esa grilla para las opciones mutuamente excluyentes. Recibe `name`, `value`, `options` y `onChange(value)`; conserva los IDs `${name}_${value}`, `ariaLabel`, `labelledBy`, `describedBy`, `invalid` y `dataAttribute`. Los grupos de hasta tres opciones usan una fila en todos los tamaños de pantalla por defecto; cada instancia puede sobrescribir sus columnas.
+
+La barra de acciones del selector permanece fija al borde inferior en todos los tamaños de pantalla. En escritorio, sus botones se alinean a la derecha dentro del mismo ancho máximo y margen lateral que el contenido; en móviles ocupan el ancho disponible. El selector reserva espacio inferior según la altura medida de la barra y respeta las áreas seguras del dispositivo.
+
+Los títulos de subsección del wizard se renderizan con `Subsection` en `SelectorForm`; usan la fuente display y un tamaño intermedio para distinguirlos de las etiquetas de controles.
+
+Las tablas, el radar, el Drawer de metodología, el Slider de temperatura, los controles `details`, el diseño adaptable, la impresión, las áreas seguras y el movimiento reducido también usan utilidades de Tailwind en sus componentes. El Slider fuente está basado en Base UI, comparte el estilo shadcn y acepta valores controlados como arreglo. Las variantes `data-*`, `motion-reduce`, `starting` y `print` controlan sus estados; las variantes arbitrarias de medios conservan los puntos de corte exactos existentes. Los estilos inline se reservan para valores calculados: colores de materiales y series, porcentajes de barras y medidas del viewport. Para extender la interfaz, componé los elementos de `src/components/ui`, combiná clases con `cn` y reutilizá los tokens semánticos; agregá las clases al componente que controla el elemento.
+
 `build` verifica TypeScript y genera el sitio estático en `dist/`; `preview` sirve ese resultado por HTTP. También podés correr las verificaciones de dominio, persistencia y rutas de publicación:
 
 ```sh

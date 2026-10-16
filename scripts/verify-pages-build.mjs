@@ -21,6 +21,19 @@ assert.ok(logoPath, "the bundled logo uses the project path");
 const assets = [scriptPath, stylePath, logoPath];
 for (const asset of assets) await stat(resolve(dist, asset.slice(base.length)));
 
+const css = await readFile(resolve(dist, stylePath.slice(base.length)), "utf8");
+assert.match(css, /\[hidden\]\s*\{display:none!important\}/, "the global hidden attribute survives utility generation");
+assert.match(css, /@media\s*\(width<=900px\)/, "the built stylesheet preserves the inclusive mobile breakpoint");
+assert.match(css, /bottom:var\(--wizard-viewport-offset,0px\)/, "fixed mobile actions use the measured viewport offset");
+assert.match(css, /scroll-margin-block:36px calc\(var\(--wizard-actions-height,0px\) \+ 36px\)/, "focused fields retain clearance from fixed actions");
+assert.match(css, /@media\s*\(prefers-reduced-motion:reduce\)/, "reduced-motion variants are emitted");
+assert.match(css, /transform:none!important/, "reduced-motion variants override directional translations");
+assert.match(css, /@starting-style/, "the native dialog retains its entry transition");
+assert.match(css, /@media print/, "print variants are emitted");
+assert.match(css, /:root\[data-theme=dark\]/, "the explicit dark theme survives the build");
+assert.match(css, /:root:not\(\[data-theme=light\]\)/, "the explicit light theme still overrides automatic dark mode");
+
+
 const contentTypes = { ".css": "text/css; charset=utf-8", ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png" };
 const server = createServer(async (request, response) => {
   const pathname = new URL(request.url, "http://localhost").pathname;
@@ -61,4 +74,4 @@ try {
   await new Promise((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
 }
 
-console.log("Verified project-path HTML, canonical/social metadata, emitted JavaScript/CSS/logo files, and HTTP availability under /selector-filamentos/.");
+console.log("Verified project-path HTML, canonical/social metadata, emitted JavaScript/CSS/logo files, Tailwind responsive/motion/print/theme output, and HTTP availability under /selector-filamentos/.");

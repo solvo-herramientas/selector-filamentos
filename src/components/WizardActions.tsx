@@ -1,4 +1,5 @@
 import { useEffect, useRef, type MouseEvent } from "react";
+import { Button } from "@/components/ui/button";
 import type { ActivationSource } from "../domain/filamentSelectionFlow.ts";
 import { visualViewportBottomOffset } from "./visualViewport.ts";
 
@@ -43,13 +44,15 @@ export default function WizardActions({ phase, firstStep, finalStep, application
     visualViewport?.addEventListener("scroll", updateOffset);
     return () => { window.removeEventListener("resize", updateOffset); visualViewport?.removeEventListener("resize", updateOffset); visualViewport?.removeEventListener("scroll", updateOffset); };
   }, []);
-  return <div className="wizard-actions" ref={actionsRef} role="group" aria-label={phase === "results" ? "Acciones de resultados" : "Navegación de preguntas"}>
-    {phase === "results" ? <>
-      <button type="button" className="btn ghost" onClick={(event) => onEdit(activationSource(event))}>Editar respuestas</button>
-      <button type="button" className="btn hot" onClick={(event) => onRestart(activationSource(event))}>Empezar de nuevo</button>
-    </> : <>
-      <button type="button" className="btn ghost" disabled={firstStep} onClick={(event) => onBack(activationSource(event))}>Atrás</button>
-      <button type="button" className="btn hot" disabled={firstStep && !applicationSelected} onClick={(event) => onContinue(activationSource(event))}>{finalStep ? "Ver resultados" : "Continuar"}</button>
-    </>}
+  return <div className="fixed inset-x-0 bottom-[var(--wizard-viewport-offset,0px)] z-5 border-t border-solid border-input bg-card pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_16px_rgba(0,0,0,.08)] print:hidden!" ref={actionsRef} role="group" aria-label={phase === "results" ? "Acciones de resultados" : "Navegación de preguntas"}>
+    <div className="mx-auto flex w-full max-w-[1352px] justify-end gap-2 pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))]">
+      {phase === "results" ? <>
+        <Button type="button" variant="ghost" className="min-h-[44px] min-w-[120px] [@media(max-width:700px)]:min-w-0 [@media(max-width:700px)]:flex-1 [@media(max-width:700px)]:px-3 [@media(max-width:700px)]:py-2.5 [@media(max-width:700px)]:whitespace-normal" onClick={(event) => onEdit(activationSource(event))}>Editar respuestas</Button>
+        <Button type="button" variant="hot" className="min-h-[44px] min-w-[120px] [@media(max-width:700px)]:min-w-0 [@media(max-width:700px)]:flex-1 [@media(max-width:700px)]:px-3 [@media(max-width:700px)]:py-2.5 [@media(max-width:700px)]:whitespace-normal" onClick={(event) => onRestart(activationSource(event))}>Empezar de nuevo</Button>
+      </> : <>
+        {!firstStep && <Button type="button" variant="ghost" className="min-h-[44px] min-w-[120px] [@media(max-width:700px)]:min-w-0 [@media(max-width:700px)]:flex-1 [@media(max-width:700px)]:px-3 [@media(max-width:700px)]:py-2.5 [@media(max-width:700px)]:whitespace-normal" onClick={(event) => onBack(activationSource(event))}>Atrás</Button>}
+        <Button type="button" variant="hot" className="min-h-[44px] min-w-[120px] [@media(max-width:700px)]:min-w-0 [@media(max-width:700px)]:flex-1 [@media(max-width:700px)]:px-3 [@media(max-width:700px)]:py-2.5 [@media(max-width:700px)]:whitespace-normal" disabled={firstStep && !applicationSelected} onClick={(event) => onContinue(activationSource(event))}>{finalStep ? "Ver resultados" : "Continuar"}</Button>
+      </>}
+    </div>
   </div>;
 }

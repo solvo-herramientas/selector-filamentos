@@ -20,13 +20,26 @@
     "verify:pages-workflow": "node scripts/verify-pages-workflow.mjs"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@radix-ui/react-checkbox": "^1.4.1",
+    "@radix-ui/react-label": "^2.1.17",
+    "@radix-ui/react-radio-group": "^1.5.1",
+    "@radix-ui/react-slot": "^1.5.0",
+    "@tabler/icons-react": "^3.49.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cn": "^0.4.0",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "tailwindcss": "^4.3.3",
     "typescript": "7.0.2",
     "vite": "8.3.4"
   }
