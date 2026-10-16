@@ -1,0 +1,207 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { APPS, BASE, CHEM } from "../src/domain/data.ts";
+import { answersForPreset, deriveConditions } from "../src/domain/conditions.ts";
+import { quotationText } from "../src/domain/exploration.ts";
+import { rankMaterials } from "../src/domain/evaluation.ts";
+import { answersChanged, createInitialWizard, effectiveWorkingTemperature, nextStepId, previousStepId, stepProgress, stepRoute, STEP_ANSWER_FIELDS, STEP_IDS, peakTemperatureWarning, validateAllSteps, validateStep, wizardReducer } from "../src/domain/filamentSelectionFlow.ts";
+import { visualViewportBottomOffset } from "../src/components/visualViewport.ts";
+
+const selectPreset = (id) => wizardReducer(createInitialWizard(), { type: "select-application", id });
+const update = (state, key, value) => wizardReducer(state, { type: "update-answer", key, value });
+const advanceTo = (state, stepId) => {
+  let next = state;
+  let count = 0;
+  while (next.phase === "questions" && next.activeStep !== stepId && count < STEP_IDS.length) {
+    const before = next;
+    next = wizardReducer(next, { type: "continue", source: "keyboard" });
+    assert.deepEqual(next.errors, {}, "preset answers validate while following the seven-step flow");
+    assert.notStrictEqual(next, before, "navigation advances toward the requested step");
+    count += 1;
+  }
+  assert.equal(next.activeStep, stepId, "requested step is active");
+  return next;
+};
+const finish = (state) => {
+  let next = state;
+  let count = 0;
+  while (next.phase === "questions" && count < STEP_IDS.length) { next = wizardReducer(next, { type: "continue", source: "keyboard" }); count += 1; }
+  assert.equal(count, STEP_IDS.length, "the wizard always has seven fixed steps");
+  assert.equal(next.phase, "results", "all applicable preset answers reach results");
+  return next;
+};
+
+const neutral = createInitialWizard();
+assert.deepEqual(stepRoute(), ["application", "temperature", "outdoor", "liquid", "mechanical", "special", "manufacturing"], "the route contains the original seven sections");
+assert.equal(neutral.selectedApplication, null, "a fresh session leaves the application unanswered");
+assert.equal(neutral.activeStep, "application");
+assert.deepEqual(validateStep("application", neutral), { app: "Elegí el tipo de pieza para continuar." }, "an unanswered application cannot continue");
+assert.deepEqual(stepProgress("application"), { current: 1, total: 7 });
+assert.deepEqual(stepProgress("manufacturing"), { current: 7, total: 7 });
+assert.equal(previousStepId("application"), null);
+assert.equal(nextStepId("manufacturing"), null);
+assert.equal(previousStepId("liquid"), "outdoor");
+assert.equal(nextStepId("liquid"), "mechanical");
+
+const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const formSource = readFileSync(new URL("../src/components/SelectorForm.tsx", import.meta.url), "utf8");
+assert.match(appSource, /wizard\.phase === "questions" \? <SelectorForm/);
+assert.match(appSource, /: conditions && ranked \? <ResultsPanel/);
+assert.match(formSource, /Paso \{progress\.current\} de \{progress\.total\}/);
+assert.match(formSource, /role="alert"/);
+assert.match(formSource, /aria-describedby=\{describedBy\("tw"\)\}/);
+assert.match(formSource, /aria-labelledby="question-title" aria-describedby=\{helpId\}/);
+assert.match(appSource, /else questionHeadingRef\.current\?\.focus\(\)/);
+assert.match(appSource, /aria-hidden="true" inert/);
+assert.match(formSource, /stepId === "temperature"/);
+assert.match(formSource, /answers\.calor === "sol"/);
+assert.match(formSource, /stepId === "outdoor"[\s\S]*?answers\.ext === "si"/);
+assert.match(formSource, /stepId === "liquid"[\s\S]*?CHEM\.map/);
+assert.match(formSource, /stepId === "mechanical"[\s\S]*?answers\.mech === "si"/);
+assert.match(formSource, /answers\.fab === "yo"/);
+assert.doesNotMatch(formSource, /onChemicalSelection|chemicalSelection|chemicalContact:/, "conditional fields remain grouped inside their original step");
+
+const rawKeys = Object.keys(answersForPreset(APPS.find(({ id }) => id === "otra"))).sort();
+const mappedKeys = [...new Set(Object.values(STEP_ANSWER_FIELDS).flat())].sort();
+assert.deepEqual(mappedKeys, rawKeys, "the seven sections cover every RawAnswers field");
+assert.equal(Object.keys(STEP_ANSWER_FIELDS).length, 7);
+
+const minimumPreset = APPS.find(({ id }) => id === "int");
+const minimumRoute = stepRoute(answersForPreset(minimumPreset), "int", []);
+assert.equal(minimumRoute.length, 7, "answers do not add or remove wizard steps");
+assert.deepEqual(minimumRoute, STEP_IDS);
+const fullAnswers = { ...answersForPreset(APPS.find(({ id }) => id === "ext")), calor: "sol", ext: "si", liq: "si", mech: "si", fab: "yo" };
+assert.deepEqual(stepRoute(fullAnswers, "ext", ["cl", "aguaCal", "agua"]), STEP_IDS, "all conditional branches stay within the same seven steps");
+const unknownAnswers = { ...answersForPreset(minimumPreset), ext: "ns", liq: "ns", mech: "ns" };
+assert.deepEqual(stepRoute(unknownAnswers, "int", []), STEP_IDS, "No sé assumptions do not add route steps");
+const unknownConditions = deriveConditions(unknownAnswers);
+assert.deepEqual(unknownConditions.assume, ["exposición parcial al sol, humedad y polvo", "contacto ocasional con agua y aceites", "carga moderada"]);
+
+let state = selectPreset("ext");
+assert.equal(state.activeStep, "application");
+state = update(state, "app", state.answers.app);
+assert.equal(state.activeStep, "application", "answer selection does not advance automatically");
+state = wizardReducer(state, { type: "continue", source: "keyboard" });
+state = update(state, "tw", "88");
+assert.equal(state.activeStep, "temperature");
+state = wizardReducer(state, { type: "back", source: "keyboard" });
+state = wizardReducer(state, { type: "continue", source: "keyboard" });
+assert.equal(state.answers.tw, "88", "back and forward retain changed values");
+const samePreset = wizardReducer(state, { type: "select-application", id: "ext" });
+assert.equal(samePreset.answers.tw, "88", "selecting the same preset does not overwrite edits");
+state = update(state, "calor", "rad");
+assert.deepEqual(state.completedSteps, ["application"], "editing an earlier step invalidates its completion and later acknowledgements");
+state = wizardReducer(state, { type: "back", source: "keyboard" });
+state = wizardReducer(state, { type: "select-application", id: "int" });
+assert.equal(state.answers.app, "int");
+assert.equal(state.answers.tw, "25", "changing piece type reapplies its suggested values");
+assert.deepEqual(state.completedSteps, [], "changing piece type invalidates all later completion");
+
+const validBase = selectPreset("int");
+let validationState = update(validBase, "tw", "");
+assert.ok(validateStep("temperature", validationState).tw, "blank working temperature is blocked");
+for (const value of ["-40", "200"]) assert.deepEqual(validateStep("temperature", update(update(validBase, "tw", value), "tmin", value === "-40" ? "-40" : "5")), {}, value + " °C is accepted at a working-temperature boundary");
+for (const value of ["-41", "201"]) assert.ok(validateStep("temperature", update(validBase, "tw", value)).tw, value + " °C is outside the working-temperature scope");
+validationState = update(update(validBase, "unknownTemperature", true), "tw", "");
+assert.deepEqual(validateStep("temperature", validationState), {}, "unknown working temperature uses the preset assumption");
+assert.equal(effectiveWorkingTemperature(validationState.answers), validationState.answers.appTw + 10);
+assert.ok(validateStep("temperature", update(validBase, "tpk", "")).tpk, "blank peak temperature is blocked");
+const peakLow = update(validBase, "tpk", "20");
+assert.deepEqual(validateStep("temperature", peakLow), {}, "a peak below working temperature does not block continuation");
+assert.ok(peakTemperatureWarning(peakLow.answers), "a clamped peak carries an advisory warning");
+assert.ok(validateStep("temperature", update(validBase, "tmin", "26")).tmin, "a minimum above working temperature is blocked");
+assert.ok(validateStep("temperature", update(validBase, "tw", "Infinity")).tw, "non-finite working temperatures are blocked");
+assert.ok(validateStep("temperature", update(validBase, "tpk", "Infinity")).tpk, "non-finite peaks are blocked");
+assert.ok(validateStep("outdoor", update(validBase, "ext", "" )).ext, "outdoor exposure requires a choice");
+assert.ok(validateStep("outdoor", { ...validBase, answers: { ...validBase.answers, ext: "si", uv: "" } }).uv, "affirmative outdoor exposure requires sun details");
+assert.deepEqual(validateStep("outdoor", update(validBase, "ext", "no")), {}, "no outdoor exposure skips conditional details");
+const liquidYes = { ...validBase, answers: { ...validBase.answers, liq: "si", ch: Object.fromEntries(CHEM.map(([key]) => [key, "0"])) } };
+assert.ok(validateStep("liquid", liquidYes).chemicals, "affirmative liquid contact requires at least one selected substance");
+for (const value of ["0", "1", "2"]) {
+  const contact = { ...liquidYes, answers: { ...liquidYes.answers, ch: { ...liquidYes.answers.ch, agua: value } } };
+  if (value === "0") assert.ok(validateStep("liquid", contact).chemicals, "no-contact levels do not count as a chemical selection");
+  else assert.deepEqual(validateStep("liquid", contact), {}, "chemical levels validate inside the liquid step");
+}
+assert.ok(validateStep("mechanical", { ...validBase, answers: { ...validBase.answers, mech: "si", carga: "" } }).carga, "affirmative mechanical stress requires a load type");
+assert.deepEqual(validateStep("mechanical", { ...validBase, answers: { ...validBase.answers, mech: "no", carga: "" } }), {}, "no mechanical stress skips load follow-ups");
+assert.ok(validateStep("mechanical", { ...validBase, answers: { ...validBase.answers, rig: "" } }).rig, "rigidity remains required in the mechanical step");
+assert.ok(validateStep("manufacturing", { ...validBase, answers: { ...validBase.answers, fab: "yo", noz: "0" } }).noz, "self-printing requires positive nozzle capacity");
+assert.ok(validateStep("manufacturing", { ...validBase, answers: { ...validBase.answers, fab: "yo", bed: "" } }).bed, "self-printing requires a finite bed maximum");
+assert.deepEqual(validateAllSteps({ ...validBase, answers: { ...validBase.answers, tw: "" } }).stepId, "temperature", "final validation finds invalid earlier steps");
+
+for (const preset of APPS) {
+  const result = finish(selectPreset(preset.id));
+  const actualConditions = deriveConditions(result.answers);
+  const expectedConditions = deriveConditions(answersForPreset(preset));
+  const actualRanked = rankMaterials(BASE, actualConditions);
+  const expectedRanked = rankMaterials(BASE, expectedConditions);
+  assert.deepEqual(actualConditions, expectedConditions, preset.id + ": submitted preset yields its original conditions");
+  assert.deepEqual(actualRanked, expectedRanked, preset.id + ": submitted preset preserves ranking, near misses, and exclusions");
+  assert.equal(quotationText(actualConditions, actualRanked), quotationText(expectedConditions, expectedRanked), preset.id + ": submitted preset preserves the quotation");
+  assert.equal(answersChanged(result.answers, { ...result.answers }), false, preset.id + ": equivalent answers retain comparisons");
+  assert.equal(answersChanged(result.answers, { ...result.answers, tw: String(Number(result.answers.tw) + 1) }), true, preset.id + ": changed answers invalidate stale comparisons");
+  const edited = wizardReducer(result, { type: "edit", source: "keyboard" });
+  assert.equal(edited.phase, "questions");
+  assert.equal(edited.activeStep, "application");
+  assert.deepEqual(edited.answers, result.answers, "editing retains answers");
+}
+
+let rapid = selectPreset("int");
+rapid = wizardReducer(rapid, { type: "continue", source: "pointer" });
+const firstTransition = rapid.transition.id;
+rapid = wizardReducer(rapid, { type: "back", source: "pointer" });
+rapid = wizardReducer(rapid, { type: "continue", source: "pointer" });
+const winningTransition = rapid.transition.id;
+rapid = wizardReducer(rapid, { type: "transition-start", id: firstTransition });
+rapid = wizardReducer(rapid, { type: "transition-complete", id: firstTransition });
+assert.equal(rapid.activeStep, "temperature");
+assert.equal(rapid.transition.id, winningTransition, "stale transition callbacks cannot clear a newer navigation");
+rapid = wizardReducer(rapid, { type: "transition-start", id: winningTransition });
+rapid = wizardReducer(rapid, { type: "transition-complete", id: winningTransition });
+assert.equal(rapid.transition, null, "the current transition clears on completion");
+assert.equal(rapid.activeStep, "temperature", "rapid forward/back/forward settles on the intended step");
+const keyboardNavigation = wizardReducer(selectPreset("int"), { type: "continue", source: "keyboard" });
+assert.equal(keyboardNavigation.transition, null, "keyboard navigation bypasses transitions");
+rapid = wizardReducer(rapid, { type: "restart", source: "keyboard" });
+assert.equal(rapid.selectedApplication, null);
+assert.equal(rapid.phase, "questions");
+assert.deepEqual(rapid.completedSteps, []);
+
+assert.ok(CHEM.every(([key]) => STEP_ANSWER_FIELDS.liquid.includes("ch") && key in validBase.answers.ch), "all chemical levels belong to the liquid step");
+assert.match(appSource, /onRestart=\{\(source\) => \{ clearComparison\(\); dispatchWizard\(\{ type: "restart", source \}\); \}\}/, "restart clears comparisons without resetting the curated material database");
+assert.equal(validateAllSteps(finish(selectPreset("int"))), null, "completed answers remain valid");
+assert.equal(visualViewportBottomOffset(800, 500, 0), 300, "visual viewport offset follows a keyboard that overlays the layout viewport");
+assert.equal(visualViewportBottomOffset(800, 460, 40), 300, "visual viewport offset accounts for offsetTop");
+assert.equal(visualViewportBottomOffset(500, 500, 0), 0, "a layout viewport resized to the visible height avoids double counting");
+assert.equal(visualViewportBottomOffset(500, null), 0, "missing VisualViewport keeps the fixed-position fallback");
+const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+const actionsSource = readFileSync(new URL("../src/components/WizardActions.tsx", import.meta.url), "utf8");
+assert.match(css, /--ease-out:cubic-bezier\(0\.23,1,0\.32,1\)/);
+assert.match(css, /--motion-duration:200ms/);
+assert.match(css, /transition-property:transform,opacity/);
+assert.match(css, /\.wizard-panel\.is-animating/);
+assert.match(css, /\.wizard-outgoing\.is-animating\.wizard-forward/);
+assert.match(css, /\.wizard-outgoing\.is-animating\.wizard-backward/);
+assert.doesNotMatch(css, /transition:\s*all|animation:/, "wizard transitions use named composite-only properties without a library or keyframes");
+assert.match(css, /@media \(prefers-reduced-motion:reduce\)/);
+assert.match(css, /@media \(max-width:900px\)/);
+assert.match(css, /\.wizard-actions\{position:fixed/);
+assert.match(css, /\.wizard-actions \.btn\{min-height:44px/);
+assert.match(css, /\.wizard-actions,\.wizard-outgoing/);
+assert.match(actionsSource, /event\.detail === 0 \? "keyboard" : "pointer"/);
+assert.match(actionsSource, /observer\.disconnect\(\)/);
+assert.match(actionsSource, /visualViewport\?\.removeEventListener\("resize"/);
+assert.match(actionsSource, /window\.addEventListener\("resize", measure\)/, "footer height remeasures when ResizeObserver is unavailable");
+assert.match(actionsSource, /disabled=\{firstStep\}/, "Atrás is disabled on the first step");
+assert.match(actionsSource, /finalStep \? "Ver resultados" : "Continuar"/);
+assert.match(actionsSource, /Editar respuestas[\s\S]*?Empezar de nuevo/);
+assert.match(formSource, /scrollIntoView\(\{ behavior: window\.matchMedia/);
+assert.match(formSource, /visualViewport\?\.addEventListener\("resize"/);
+assert.match(formSource, /formRef\.current\?\.contains\(focused\)/);
+assert.match(css, /scroll-margin-block:36px calc\(var\(--wizard-actions-height,0px\) \+ 36px\)/);
+assert.match(appSource, /activeTab === "sel" && <WizardActions/);
+assert.doesNotMatch(appSource, /IntersectionObserver|jumpRef|jumpBtn|exampleVisible/);
+assert.doesNotMatch(css, /\.jump\{|padding-bottom:80px/);
+assert.match(css, /nav,\.form,\.wizard-actions,\.wizard-outgoing,footer/);
+assert.match(css, /\.results\{min-width:0;display:grid/);
+console.log("Verified the fixed seven-step route, grouped conditional fields, RawAnswers coverage, progress, validation, answer retention, preset behavior, ranking equivalence, results editing, restart, viewport handling, and interrupted navigation.");

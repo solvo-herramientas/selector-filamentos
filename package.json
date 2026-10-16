@@ -1,0 +1,33 @@
+{
+  "name": "selector-filamentos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": "24.19.x",
+    "pnpm": "12.14.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "verify:wizard": "node --experimental-strip-types scripts/verify-wizard.mjs",
+    "verify:domain": "node --experimental-strip-types scripts/verify-domain.mjs",
+    "verify:persistence": "node --experimental-strip-types scripts/verify-persistence.mjs",
+    "verify:pages-build": "node scripts/verify-pages-build.mjs",
+    "verify:pages-workflow": "node scripts/verify-pages-workflow.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}
