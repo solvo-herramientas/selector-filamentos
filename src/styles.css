@@ -43,6 +43,11 @@
   --radius-xl: 8px;
 }
 
+@layer utilities {
+  .wizard-focus-clearance :is(input, select, button) { scroll-margin-block: 24px calc(var(--wizard-actions-height, 0px) + 24px); }
+  .wizard-focus-clearance :is(input, select):focus { scroll-margin-block: 36px calc(var(--wizard-actions-height, 0px) + 36px); }
+}
+
 @layer base {
 :root{
   --bg:#eef0f2; --panel:#ffffff; --ink:#16191d; --muted:#5d6670; --line:#d5dade; --soft:#e4e8eb; --band:#e6e9ec; --sep:#aab2ba;

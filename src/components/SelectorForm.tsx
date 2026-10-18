@@ -108,7 +108,7 @@ export default function SelectorForm({ stepId, progress, answers, selectedApplic
       <div className="grid justify-items-start gap-2"><GroupLabel id="prio-label">Prioridad al elegir</GroupLabel><SegmentedControl name="prio" value={answers.prio} options={PRIORITY_OPTIONS} labelledBy="prio-label" describedBy={describedBy("prio")} invalid={invalid("prio")} onChange={(value) => setAnswer("prio", value as RawAnswers["prio"])} /><FieldError field="prio" errors={errors} /></div>
     </>;
   };
-  return <form className="print:hidden! border-0 bg-transparent [border-radius:0] [&_[aria-invalid=true]]:outline-warn" id="selector-form" onSubmit={handleSubmit} onKeyDown={handleEnter}>
+  return <form className="wizard-focus-clearance print:hidden! border-0 bg-transparent [border-radius:0] [&_[aria-invalid=true]]:outline-warn" id="selector-form" onSubmit={handleSubmit} onKeyDown={handleEnter}>
     <div className="mb-1.5 font-mono text-[11px] font-semibold uppercase tracking-[.04em] text-muted-foreground" role="status" aria-live="polite" aria-label={"Paso " + progress.current + " de " + progress.total}><span aria-current="step">Paso {progress.current} de {progress.total}</span></div>
     <section className="grid gap-2.5 p-0" aria-labelledby="question-title" aria-describedby={helpId}>
       <div className="flex items-baseline gap-2.5"><h2 className="m-0 font-display [font-stretch:90%] text-xl font-bold leading-[1.2] focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring" id="question-title" ref={headingRef} tabIndex={-1}>{stepTitle(stepId)}</h2></div>
